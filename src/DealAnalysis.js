@@ -264,7 +264,7 @@ function parseDateUS(s) {
   if (!s) return null;
   const d1 = new Date(s);
   if (!isNaN(d1)) return d1;
-    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    const m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
   if (!m) return null;
   let [, mm, dd, yy] = m;
   mm = parseInt(mm, 10); dd = parseInt(dd, 10); yy = parseInt(yy, 10);
