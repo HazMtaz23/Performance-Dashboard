@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import './index.css';
 import Home from "./Home";
 import DealAnalysis from "./DealAnalysis";
@@ -12,7 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/deal-analysis" element={<DealAnalysis />} />
-        <Route path="/clo" element={<CLOAnalysis />} />
+  <Route path="/clo-analysis" element={<CLOAnalysis />} />
         <Route path="/news" element={<NewsAccuracy />} />
       </Routes>
     </Router>

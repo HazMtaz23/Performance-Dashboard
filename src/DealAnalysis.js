@@ -11,10 +11,37 @@ import {
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQdVsFJIGHGZkadZ90NQEB-9AMplEDUd9HqizLq12EYdzOmVovHpQpXTS74UxnJmqRry03Nf6g5MZXP/pub?output=csv";
 
 export default function DealAnalysis() {
+  // Month/year filter state
+  const [selectedYear, setSelectedYear] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [allWeeks, setAllWeeks] = useState([]);
+  // Build year/month options from allWeeks
+  const allMonths = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const weekYearMonth = allWeeks.map(w => ({
+    year: w.getFullYear(),
+    month: w.getMonth(),
+    week: w
+  }));
+  const uniqueYears = Array.from(new Set(weekYearMonth.map(w => w.year))).sort((a, b) => b - a);
+  const monthsInYear = selectedYear !== 'all'
+    ? Array.from(new Set(weekYearMonth.filter(w => w.year === Number(selectedYear)).map(w => w.month))).sort((a, b) => a - b)
+    : [];
+
+  // Filter weeks by year/month
+  let weekWindow = allWeeks;
+  if (selectedYear !== 'all') {
+    weekWindow = weekWindow.filter(w => w.getFullYear() === Number(selectedYear));
+    if (selectedMonth !== 'all') {
+      weekWindow = weekWindow.filter(w => w.getMonth() === Number(selectedMonth));
+    }
+  }
+
   const [rows, setRows] = useState([]);
   const [associates, setAssociates] = useState(["Everyone"]);
   const [selected, setSelected] = useState("Everyone");
-  const [allWeeks, setAllWeeks] = useState([]);
 
   useEffect(() => {
     fetch(CSV_URL)
@@ -64,6 +91,7 @@ export default function DealAnalysis() {
         setRows(cleaned);
         setAssociates(["Everyone", ...unique]);
         setAllWeeks(weeks);
+  // ...slider logic removed...
       });
   }, []);
 
@@ -81,7 +109,9 @@ export default function DealAnalysis() {
     if (r.error) obj.errors += 1;
   }
 
-  const errorRateData = allWeeks.map(w => {
+  // Only show a rolling window of weeks
+
+  const errorRateData = weekWindow.map(w => {
     const entry = rateByWeek.get(+w);
     return {
       week: formatUS(w),
@@ -99,7 +129,7 @@ export default function DealAnalysis() {
     obj[r.errorType] = (obj[r.errorType] || 0) + 1;
   }
 
-  const errorTypeData = allWeeks.map(w => {
+  const errorTypeData = weekWindow.map(w => {
     const entry = typesByWeek.get(+w) || { week: formatUS(w), weekDate: w };
     return entry;
   });
@@ -149,7 +179,32 @@ export default function DealAnalysis() {
       </div>
       <h2 className="text-3xl font-extrabold text-blue-900 mb-6 text-center tracking-tight">Deal Analysis</h2>
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+      {/* Year/Month dropdowns */}
+      <div className="mb-8 flex flex-col md:flex-row items-center gap-4">
+        <label className="font-medium text-gray-700">Year:
+          <select
+            value={selectedYear}
+            onChange={e => { setSelectedYear(e.target.value); setSelectedMonth('all'); }}
+            className="ml-2 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 shadow-sm"
+          >
+            <option value="all">All Time</option>
+            {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </label>
+        <label className="font-medium text-gray-700">Month:
+          <select
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="ml-2 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 shadow-sm"
+            disabled={selectedYear === 'all'}
+          >
+            <option value="all">All</option>
+            {monthsInYear.map(m => <option key={m} value={m}>{allMonths[m]}</option>)}
+          </select>
+        </label>
+        <span className="text-gray-500 mt-1 text-sm">Showing weeks {weekWindow.length > 0 ? formatUS(weekWindow[0]) : ''} to {weekWindow.length > 0 ? formatUS(weekWindow[weekWindow.length-1]) : ''}</span>
+      </div>
         <label className="font-medium text-gray-700 text-lg flex items-center gap-2">
           <span>Select Associate:</span>
           <select
@@ -209,7 +264,7 @@ function parseDateUS(s) {
   if (!s) return null;
   const d1 = new Date(s);
   if (!isNaN(d1)) return d1;
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    const m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
   if (!m) return null;
   let [, mm, dd, yy] = m;
   mm = parseInt(mm, 10); dd = parseInt(dd, 10); yy = parseInt(yy, 10);
