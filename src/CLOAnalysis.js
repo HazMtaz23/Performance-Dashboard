@@ -166,18 +166,14 @@ export default function CLOAnalysis() {
     return entry;
   });
 
-  // Only 2 colors: Green for "DA" in name, Blue for others
+  // All error types are blue
   const errorTypeKeys = Array.from(
     new Set(errorTypeData.flatMap(o => Object.keys(o).filter(k => k !== "week" && k !== "weekDate")))
   );
 
   const errorTypeColors = {};
   errorTypeKeys.forEach(type => {
-    if (type.toUpperCase().includes("DA")) {
-      errorTypeColors[type] = "#4CAF50"; // green
-    } else {
-      errorTypeColors[type] = "#2196F3"; // blue
-    }
+    errorTypeColors[type] = "#2196F3"; // blue
   });
 
   // Custom tooltip for error rate bar chart (show error rate and total deals)
