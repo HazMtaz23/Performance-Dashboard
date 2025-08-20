@@ -29,25 +29,41 @@ export default function CLOAnalysis() {
           skipEmptyLines: "greedy"
         });
 
+        // For error rate: group by week (and associate if filtered), count rows and errors
         const cleaned = [];
+        (parsed.data || []).forEach(r => {
+          const assoc = (r["Associate"] || "").trim();
+          const date = parseDateUS(r["Date"]);
+          if (!assoc || !date) return;
+          const weekStart = getWeekStart(date);
+          const weekLabel = formatUS(weekStart);
+          const errorTF = (r["Associate Error T/F"] || "").toString().trim().toLowerCase();
+          const error = errorTF === "true" || errorTF === "yes" || errorTF === "1";
+          cleaned.push({
+            associate: assoc,
+            date,
+            weekDate: weekStart,
+            week: weekLabel,
+            error
+          });
+        });
 
+        // For error type breakdowns, keep original logic (may double-count deals with multiple error types)
+        const errorTypeRows = [];
         (parsed.data || []).forEach(r => {
           const assoc = (r["Associate"] || "").trim();
           const date = parseDateUS(r["Date"]);
           const errorTF = (r["Associate Error T/F"] || "").toString().trim().toLowerCase();
           const error = errorTF === "true" || errorTF === "yes" || errorTF === "1";
           if (!assoc || !date) return;
-
           const weekStart = getWeekStart(date);
           const weekLabel = formatUS(weekStart);
-
           const rawTypes = (r["Error Type"] ?? "").trim();
           const errorTypes = rawTypes
             ? rawTypes.split(",").map(t => t.trim())
             : ["None"];
-
           errorTypes.forEach(type => {
-            cleaned.push({
+            errorTypeRows.push({
               associate: assoc,
               date,
               weekDate: weekStart,
@@ -64,18 +80,19 @@ export default function CLOAnalysis() {
         const unique = Array.from(new Set(cleaned.map(r => r.associate)))
           .sort((a, b) => a.localeCompare(b));
 
-        setRows(cleaned);
+        setRows({ cleaned, errorTypeRows });
         setAssociates(["Everyone", ...unique]);
         setAllWeeks(weeks);
   // No need to set weekStartIdx for dropdown view
       });
   }, []);
 
+  // rows is now { cleaned, errorTypeRows }
   const filtered = selected === "Everyone"
-    ? rows
-    : rows.filter(r => r.associate === selected);
+    ? rows.cleaned || []
+    : (rows.cleaned || []).filter(r => r.associate === selected);
 
-  // Weekly error rate
+  // Weekly error rate: errors / total rows * 100
   const rateByWeek = new Map();
   for (const r of filtered) {
     const key = +r.weekDate;
@@ -85,7 +102,6 @@ export default function CLOAnalysis() {
     if (r.error) obj.errors += 1;
   }
 
-  // Determine which weeks to show based on viewMode
   // Build year/month options from allWeeks
   const allMonths = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -114,7 +130,7 @@ export default function CLOAnalysis() {
     const entry = rateByWeek.get(+w);
     return {
       week: formatUS(w),
-      errorRate: entry ? Number(((entry.errors / entry.total) * 100).toFixed(1)) : 0
+      errorRate: entry && entry.total > 0 ? Number(((entry.errors / entry.total) * 100).toFixed(2)) : 0
     };
   });
 
