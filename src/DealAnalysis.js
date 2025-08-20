@@ -8,7 +8,7 @@ import {
   CartesianGrid, ResponsiveContainer
 } from "recharts";
 
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQdVsFJIGHGZkadZ90NQEB-9AMplEDUd9HqizLq12EYdzOmVovHpQpXTS74UxnJmqRry03Nf6g5MZXP/pub?output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr9lEADK4NPO_ATOkFS0CCYdk64OkbnAyKTd_74KCYza-7zAEJlV1T4zlvOEMWaF_FqcsCzAcnljsz/pub?output=csv";
 
 export default function DealAnalysis() {
   // Month/year filter state
