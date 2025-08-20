@@ -129,7 +129,8 @@ export default function DealAnalysis() {
     const entry = rateByWeek.get(+w);
     return {
       week: formatUS(w),
-      errorRate: entry && entry.total > 0 ? Number(((entry.errors / entry.total) * 100).toFixed(2)) : 0
+      errorRate: entry && entry.total > 0 ? Number(((entry.errors / entry.total) * 100).toFixed(2)) : 0,
+      totalDeals: entry ? entry.total : 0
     };
   });
 
@@ -166,7 +167,29 @@ export default function DealAnalysis() {
     }
   });
 
-  // Custom tooltip for error types
+  // Custom tooltip for error rate bar chart (show error rate and total deals)
+  const ErrorRateTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div style={{
+          background: "white",
+          border: "1px solid #ccc",
+          padding: "8px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+          marginBottom: "20px"
+        }}>
+          <p><strong>{label}</strong></p>
+          <p style={{ color: '#2196F3', margin: 0 }}>Error Rate: {data.errorRate}%</p>
+          <p style={{ color: '#333', margin: 0 }}>Total Deal Updates: {data.totalDeals}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Custom tooltip for error types (unchanged)
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -243,7 +266,7 @@ export default function DealAnalysis() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="week" />
             <YAxis domain={[0, 100]} />
-            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
+            <Tooltip content={<ErrorRateTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
             <Legend />
             <Bar dataKey="errorRate" name="Error Rate (%)" fill="#2196F3" />
           </BarChart>
