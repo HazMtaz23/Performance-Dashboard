@@ -48,8 +48,14 @@ export default function CLOAnalysis() {
           });
         });
 
-        // For error type breakdowns, keep original logic (may double-count deals with multiple error types)
+        // For error type breakdowns, robustly find the error type column (case-insensitive, trimmed)
         const errorTypeRows = [];
+        // Find the error type column key (case-insensitive)
+        let errorTypeKey = null;
+        if (parsed.data && parsed.data.length > 0) {
+          const keys = Object.keys(parsed.data[0]);
+          errorTypeKey = keys.find(k => k.trim().toLowerCase() === "error type");
+        }
         (parsed.data || []).forEach(r => {
           const assoc = (r["Associate"] || "").trim();
           const date = parseDateUS(r["Date"]);
@@ -58,10 +64,16 @@ export default function CLOAnalysis() {
           if (!assoc || !date) return;
           const weekStart = getWeekStart(date);
           const weekLabel = formatUS(weekStart);
-          const rawTypes = (r["Error Type"] ?? "").trim();
-          const errorTypes = rawTypes
-            ? rawTypes.split(",").map(t => t.trim())
-            : ["None"];
+          let rawTypes = "";
+          if (errorTypeKey) {
+            rawTypes = (r[errorTypeKey] ?? "").trim();
+          }
+          let errorTypes;
+          if (!rawTypes || rawTypes.toLowerCase() === 'none' || rawTypes === '') {
+            errorTypes = ["None"];
+          } else {
+            errorTypes = rawTypes.split(",").map(t => t.trim() || "None");
+          }
           errorTypes.forEach(type => {
             errorTypeRows.push({
               associate: assoc,
@@ -135,9 +147,13 @@ export default function CLOAnalysis() {
     };
   });
 
-  // Weekly error types
+  // Weekly error types (using errorTypeRows, which may double-count CLOs with multiple error types)
+  const errorTypeFiltered = selected === "Everyone"
+    ? (rows.errorTypeRows || [])
+    : (rows.errorTypeRows || []).filter(r => r.associate === selected);
+
   const typesByWeek = new Map();
-  for (const r of filtered) {
+  for (const r of errorTypeFiltered) {
     if (!r.error) continue;
     const key = +r.weekDate;
     if (!typesByWeek.has(key)) typesByWeek.set(key, { week: formatUS(r.weekDate), weekDate: r.weekDate });
