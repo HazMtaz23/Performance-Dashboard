@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Papa from "papaparse";
 import {
   BarChart, Bar,
@@ -142,37 +143,48 @@ export default function DealAnalysis() {
   };
 
   return (
-    <div>
-      <h2>Deal Analysis</h2>
+    <div className="max-w-4xl mx-auto mt-10 mb-16 bg-white/80 rounded-2xl shadow-2xl p-8 md:p-12 backdrop-blur-lg">
+      <div className="mb-6">
+        <Link to="/" className="inline-block px-5 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition">← Back to Home</Link>
+      </div>
+      <h2 className="text-3xl font-extrabold text-blue-900 mb-6 text-center tracking-tight">Deal Analysis</h2>
 
-      <label>
-        Select Associate:{" "}
-        <select value={selected} onChange={e => setSelected(e.target.value)}>
-          {associates.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </label>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <label className="font-medium text-gray-700 text-lg flex items-center gap-2">
+          <span>Select Associate:</span>
+          <select
+            value={selected}
+            onChange={e => setSelected(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-800 shadow-sm"
+          >
+            {associates.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </label>
+      </div>
 
       {/* Weekly Error Rate */}
-      <h3>Weekly Error Rate (%)</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={errorRateData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="week" />
-          <YAxis domain={[0, 100]} />
-          <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
-          <Legend />
-          <Bar dataKey="errorRate" name="Error Rate (%)" fill="#2196F3" />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="mb-12 bg-blue-50 rounded-xl shadow p-6">
+        <h3 className="text-xl font-bold text-blue-800 mb-4">Weekly Error Rate (%)</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={errorRateData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="week" />
+            <YAxis domain={[0, 100]} />
+            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
+            <Legend />
+            <Bar dataKey="errorRate" name="Error Rate (%)" fill="#2196F3" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* Weekly Error Types (stacked) */}
       {selected !== "Everyone" && (
-        <>
-          <h3>Weekly Error Types</h3>
+        <div className="bg-green-50 rounded-xl shadow p-6">
+          <h3 className="text-xl font-bold text-green-800 mb-4">Weekly Error Types</h3>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={errorTypeData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" /> {/* keep week dates visible */}
+              <XAxis dataKey="week" />
               <YAxis />
               <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
               <Legend />
@@ -186,7 +198,7 @@ export default function DealAnalysis() {
               ))}
             </BarChart>
           </ResponsiveContainer>
-        </>
+        </div>
       )}
     </div>
   );
