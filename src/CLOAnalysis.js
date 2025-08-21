@@ -39,12 +39,15 @@ export default function CLOAnalysis() {
           const weekLabel = formatUS(weekStart);
           const errorTF = (r["Associate Error T/F"] || "").toString().trim().toLowerCase();
           const error = errorTF === "true" || errorTF === "yes" || errorTF === "1";
+          // Also include Team Error T/F for later use
+          const teamErrorTF = (r["Team Error T/F"] || "").toString().trim().toLowerCase();
           cleaned.push({
             associate: assoc,
             date,
             weekDate: weekStart,
             week: weekLabel,
-            error
+            error,
+            teamErrorTF // store the raw value for later
           });
         });
 
@@ -104,14 +107,26 @@ export default function CLOAnalysis() {
     ? rows.cleaned || []
     : (rows.cleaned || []).filter(r => r.associate === selected);
 
-  // Weekly error rate: errors / total rows * 100
-  const rateByWeek = new Map();
+  // Weekly associate error rate: errors / total rows * 100 (as before)
+  const associateRateByWeek = new Map();
   for (const r of filtered) {
     const key = +r.weekDate;
-    if (!rateByWeek.has(key)) rateByWeek.set(key, { week: r.week, weekDate: r.weekDate, errors: 0, total: 0 });
-    const obj = rateByWeek.get(key);
+    if (!associateRateByWeek.has(key)) associateRateByWeek.set(key, { week: r.week, weekDate: r.weekDate, errors: 0, total: 0 });
+    const obj = associateRateByWeek.get(key);
     obj.total += 1;
     if (r.error) obj.errors += 1;
+  }
+
+  // Weekly team error rate: team errors / total rows * 100
+  const teamRateByWeek = new Map();
+  for (const r of filtered) {
+    const key = +r.weekDate;
+    if (!teamRateByWeek.has(key)) teamRateByWeek.set(key, { week: r.week, weekDate: r.weekDate, errors: 0, total: 0 });
+    const obj = teamRateByWeek.get(key);
+    obj.total += 1;
+    // Use the stored teamErrorTF value
+    const teamError = r.teamErrorTF === "true" || r.teamErrorTF === "yes" || r.teamErrorTF === "1";
+    if (teamError) obj.errors += 1;
   }
 
   // Build year/month options from allWeeks
@@ -138,8 +153,17 @@ export default function CLOAnalysis() {
     }
   }
 
-  const errorRateData = weekWindow.map(w => {
-    const entry = rateByWeek.get(+w);
+  const associateErrorRateData = weekWindow.map(w => {
+    const entry = associateRateByWeek.get(+w);
+    return {
+      week: formatUS(w),
+      errorRate: entry && entry.total > 0 ? Number(((entry.errors / entry.total) * 100).toFixed(2)) : 0,
+      totalDeals: entry ? entry.total : 0
+    };
+  });
+
+  const teamErrorRateData = weekWindow.map(w => {
+    const entry = teamRateByWeek.get(+w);
     return {
       week: formatUS(w),
       errorRate: entry && entry.total > 0 ? Number(((entry.errors / entry.total) * 100).toFixed(2)) : 0,
@@ -267,11 +291,12 @@ export default function CLOAnalysis() {
         </label>
       </div>
 
-      {/* Weekly Error Rate */}
+
+      {/* Associate Weekly Error Rate */}
       <div className="mb-12 bg-blue-50 rounded-xl shadow p-6">
-        <h3 className="text-xl font-bold text-blue-800 mb-4">Weekly Error Rate (%)</h3>
+        <h3 className="text-xl font-bold text-blue-800 mb-4">Associate Weekly Error Rate (%)</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={errorRateData}>
+          <BarChart data={associateErrorRateData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="week" angle={-40} textAnchor="end" minTickGap={10} height={60} />
             <YAxis domain={[0, 100]} />
@@ -281,6 +306,23 @@ export default function CLOAnalysis() {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Team Weekly Error Rate (Everyone only) */}
+      {selected === "Everyone" && (
+        <div className="mb-12 bg-purple-50 rounded-xl shadow p-6">
+          <h3 className="text-xl font-bold text-purple-800 mb-4">Team Weekly Error Rate (%)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={teamErrorRateData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" angle={-40} textAnchor="end" minTickGap={10} height={60} />
+              <YAxis domain={[0, 100]} />
+              <Tooltip content={<ErrorRateTooltip />} wrapperStyle={{ zIndex: 1000, top: -10 }} />
+              <Legend />
+              <Bar dataKey="errorRate" name="Error Rate (%)" fill="#9C27B0" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Weekly Error Types (stacked) */}
       {selected !== "Everyone" && (
