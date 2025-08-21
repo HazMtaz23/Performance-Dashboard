@@ -184,7 +184,8 @@ export default function DealAnalysis() {
 
   const errorTypeColors = {};
   errorTypeKeys.forEach(type => {
-    if (type.toUpperCase().includes("DA")) {
+    // Only color green if 'DA' is present as uppercase (not lowercase 'da')
+    if (/(^|[^a-zA-Z])DA([^a-zA-Z]|$)/.test(type)) {
       errorTypeColors[type] = "#4CAF50"; // green
     } else {
       errorTypeColors[type] = "#2196F3"; // blue
