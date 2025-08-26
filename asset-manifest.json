@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/Performance-Dashboard/static/css/main.6e574d13.css",
-    "main.js": "/Performance-Dashboard/static/js/main.06941969.js",
+    "main.css": "/Performance-Dashboard/static/css/main.d4808118.css",
+    "main.js": "/Performance-Dashboard/static/js/main.26b0020b.js",
     "static/js/453.e4dbb174.chunk.js": "/Performance-Dashboard/static/js/453.e4dbb174.chunk.js",
     "static/media/9fin.jpg": "/Performance-Dashboard/static/media/9fin.c0c94d7c560a57758c0e.jpg",
     "index.html": "/Performance-Dashboard/index.html",
-    "main.6e574d13.css.map": "/Performance-Dashboard/static/css/main.6e574d13.css.map",
-    "main.06941969.js.map": "/Performance-Dashboard/static/js/main.06941969.js.map",
+    "main.d4808118.css.map": "/Performance-Dashboard/static/css/main.d4808118.css.map",
+    "main.26b0020b.js.map": "/Performance-Dashboard/static/js/main.26b0020b.js.map",
     "453.e4dbb174.chunk.js.map": "/Performance-Dashboard/static/js/453.e4dbb174.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.6e574d13.css",
-    "static/js/main.06941969.js"
+    "static/css/main.d4808118.css",
+    "static/js/main.26b0020b.js"
   ]
 }
