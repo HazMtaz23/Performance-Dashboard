@@ -12,7 +12,11 @@ export default function Home() {
       {/* Hero Section */}
       <header className="flex flex-col items-center mb-16 mt-16">
         <div className="bg-white/30 backdrop-blur-lg rounded-full shadow-2xl p-8 mb-6 border-4 border-white/40">
-          <img src={logo} alt="Logo" style={{ width: 96, height: 96 }} className="rounded-full shadow-lg" />
+          <img 
+            src={logo} 
+            alt="Logo" 
+            className="max-w-[120px] max-h-[120px] rounded-lg shadow-lg object-contain" 
+          />
         </div>
         <h1 className="text-5xl md:text-7xl font-extrabold text-white drop-shadow-lg mb-4 text-center tracking-tight">Performance Dashboard</h1>
         <p className="text-2xl text-white/80 text-center max-w-2xl mb-8 font-medium">Welcome! Dive into beautiful analytics and insights for deals, CLOs, and news accuracy. Select a section below to get started.</p>
