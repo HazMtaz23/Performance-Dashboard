@@ -208,7 +208,7 @@ export default function CLOAnalysis() {
         <button onClick={fetchData} className="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold shadow hover:bg-green-700 transition">Refresh Data</button>
       </div>
 
-      {dataSource==="live" && <p className="text-green-600 font-medium mb-4">✅ Live data loaded</p>}
+      {dataSource==="live" && <p className="text-green-600 font-medium mb-4">✅ Live data</p>}
       {dataSource==="cached" && cacheTime && <p className="text-orange-600 font-medium mb-4">⚠️ Live data unavailable. Showing cached data from {new Date(cacheTime).toLocaleString()}</p>}
       {dataSource==="none" && <p className="text-red-600 font-medium mb-4">❌ No data available</p>}
 
