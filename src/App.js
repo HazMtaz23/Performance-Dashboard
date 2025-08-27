@@ -1,17 +1,17 @@
-// App.js
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './Home';
-import Login from './Login';
-import DealAnalysis from './DealAnalysis';
-import CLOAnalysis from './CLOAnalysis';
-import NewsAccuracy from './NewsAccuracy';
-import PrivateRoute from './PrivateRoute';
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import Home from "./Home";
+import DealAnalysis from "./DealAnalysis";
+import CLOAnalysis from "./CLOAnalysis";
+import NewsAccuracy from "./NewsAccuracy";
+import Login from "./Login";
+import PrivateRoute from "./PrivateRoute";
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+
         <Route
           path="/"
           element={
