@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// App.js
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './Home';
 import Login from './Login';
 import DealAnalysis from './DealAnalysis';
@@ -10,10 +11,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public login page */}
         <Route path="/login" element={<Login />} />
-
-        {/* Protected routes */}
         <Route
           path="/"
           element={
@@ -46,9 +44,6 @@ function App() {
             </PrivateRoute>
           }
         />
-
-        {/* Optional: Redirect unknown routes to login */}
-        <Route path="*" element={<Login />} />
       </Routes>
     </Router>
   );
