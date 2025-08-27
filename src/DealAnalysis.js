@@ -5,12 +5,17 @@ import {
   BarChart, Bar,
   XAxis, YAxis,
   Tooltip, Legend,
-  CartesianGrid, ResponsiveContainer
+  CartesianGrid, ResponsiveContainer,
+  LineChart, Line
 } from "recharts";
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr9lEADK4NPO_ATOkFS0CCYdk64OkbnAyKTd_74KCYza-7zAEJlV1T4zlvOEMWaF_FqcsCzAcnljsz/pub?gid=0&single=true&output=csv";
 
 export default function DealAnalysis() {
+  // ...existing state and hooks...
+
+
+  // ...state hooks...
   const [selectedYear, setSelectedYear] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [allWeeks, setAllWeeks] = useState([]);
@@ -20,6 +25,40 @@ export default function DealAnalysis() {
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState("none"); // live, cached, none
   const [cachedTime, setCachedTime] = useState(null);
+
+  // --- Weekly Average Time Taken Calculation ---
+  function parseTimeTaken(val) {
+    if (!val || typeof val !== 'string') return null;
+    const parts = val.split(':');
+    if (parts.length === 2) {
+      const hours = parseInt(parts[0], 10);
+      const mins = parseInt(parts[1], 10);
+      if (!isNaN(hours) && !isNaN(mins)) return hours * 60 + mins;
+    }
+    return null;
+  }
+
+  // Group by week and compute average
+  // Use filtered data for associate-specific chart, or all data for 'Everyone'
+  const chartRows = selected === "Everyone"
+    ? (rows.cleaned || [])
+    : (rows.cleaned || []).filter(r => r.associate === selected);
+
+  const weeklyTimeTakenMap = new Map();
+  chartRows.forEach(r => {
+    const min = parseTimeTaken(r.timeTaken);
+    // Only include non-null, non-blank values
+    if (min !== null && r.timeTaken && r.timeTaken.trim() !== "" && r.weekDate) {
+      const key = +r.weekDate;
+      if (!weeklyTimeTakenMap.has(key)) weeklyTimeTakenMap.set(key, { week: formatUS(r.weekDate), total: 0, count: 0 });
+      const obj = weeklyTimeTakenMap.get(key);
+      obj.total += min;
+      obj.count += 1;
+    }
+  });
+  const weeklyAvgTimeTakenData = Array.from(weeklyTimeTakenMap.entries())
+    .map(([key, obj]) => ({ week: obj.week, avgMinutes: +(obj.total / obj.count).toFixed(2) }))
+    .sort((a, b) => new Date(a.week) - new Date(b.week));
 
   const allMonths = [
     'January','February','March','April','May','June',
@@ -47,7 +86,16 @@ export default function DealAnalysis() {
         const error = errorTF === "true" || errorTF === "yes" || errorTF === "1";
         const teamErrorTF = (r["Team Error T/F"] || "").toString().trim().toLowerCase();
         const avgTime = parseFloat(r["Average"] || r["Average Time"] || r["Avg"] || r["Avg Time"] || 0);
-        cleaned.push({ associate: assoc, date, weekDate: weekStart, week: weekLabel, error, teamErrorTF, averageTime: avgTime });
+        cleaned.push({
+          associate: assoc,
+          date,
+          weekDate: weekStart,
+          week: weekLabel,
+          error,
+          teamErrorTF,
+          averageTime: avgTime,
+          timeTaken: r["Time Taken"]
+        });
 
         const rawTypes = (r["Error Type"] ?? "").trim();
         const errorTypes = rawTypes ? rawTypes.split(",").map(t => t.trim()) : ["None"];
@@ -275,6 +323,23 @@ export default function DealAnalysis() {
               <Legend />
               {errorTypeKeys.map(k => <Bar key={k} dataKey={k} stackId="a" fill={errorTypeColors[k]} />)}
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Weekly Average Time Taken Chart */}
+      {weeklyAvgTimeTakenData.length > 0 && (
+        <div className="mt-8 mb-12 bg-yellow-50 rounded-xl shadow p-6">
+          <h3 className="text-xl font-bold text-yellow-800 mb-4">Weekly Average Time Taken (minutes)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={weeklyAvgTimeTakenData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="avgMinutes" name="Avg Minutes" stroke="#FF9800" strokeWidth={2} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       )}
