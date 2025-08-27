@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [passwordInput, setPasswordInput] = useState("");
@@ -7,7 +7,6 @@ export default function Login() {
   const correctPassword = "9fin2025";
 
   useEffect(() => {
-    // Redirect to home if already logged in
     if (sessionStorage.getItem("authenticated") === "true") {
       navigate("/", { replace: true });
     }
@@ -24,12 +23,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-900 via-blue-400 to-purple-300 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-900 via-blue-400 to-purple-300">
       <form
         onSubmit={handleSubmit}
         className="bg-white/80 p-8 rounded-2xl shadow-xl flex flex-col gap-4 w-80"
       >
-        <h2 className="text-2xl font-bold text-center text-blue-900">Enter Password</h2>
+        <h2 className="text-2xl font-bold text-center text-blue-900">
+          Enter Password
+        </h2>
         <input
           type="password"
           placeholder="Password"
