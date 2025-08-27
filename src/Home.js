@@ -1,8 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from './9fin.jpg';
 
 export default function Home() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+
+  const correctPassword = "9fin2025";
+
+  useEffect(() => {
+    // Check if already logged in this session
+    if (sessionStorage.getItem("authenticated") === "true") {
+      setAuthenticated(true);
+    }
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (passwordInput === correctPassword) {
+      setAuthenticated(true);
+      sessionStorage.setItem("authenticated", "true"); // store login state
+    } else {
+      alert("Incorrect password, please try again.");
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-900 via-blue-400 to-purple-300">
+        <form 
+          onSubmit={handleSubmit} 
+          className="bg-white/80 p-8 rounded-2xl shadow-xl flex flex-col gap-4 w-80"
+        >
+          <h2 className="text-2xl font-bold text-center text-blue-900">Enter Password</h2>
+          <input
+            type="password"
+            placeholder="Password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            className="p-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button 
+            type="submit" 
+            className="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Unlock
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  // Render dashboard if authenticated
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-tr from-blue-900 via-blue-400 to-purple-300 px-4 relative overflow-hidden">
       {/* Dramatic background shapes */}
