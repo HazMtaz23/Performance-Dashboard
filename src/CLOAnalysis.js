@@ -5,7 +5,9 @@ import {
   BarChart, Bar,
   XAxis, YAxis,
   Tooltip, Legend,
-  CartesianGrid, ResponsiveContainer
+  CartesianGrid, ResponsiveContainer,
+  LineChart, Line,
+  ReferenceLine
 } from "recharts";
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBykKoZHLLCvMVVbb1aFsRB_RdNBHmsB9qU-fuPo4KITf_ElwEXGla8OyKpd_9pyk9Me05NB0ZQC24/pub?gid=1740837312&single=true&output=csv";
@@ -20,6 +22,27 @@ export default function CLOAnalysis() {
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState("live"); // live, cached, none
   const [cacheTime, setCacheTime] = useState(null);
+
+  // Parse time taken from CLO column (column M), supports h:mm:ss or minutes as number
+  function parseCLOTime(val) {
+    if (val === undefined || val === null || val === "") return null;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      // Try direct number first
+      const num = Number(val);
+      if (!isNaN(num)) return num;
+      // Try h:mm:ss or mm:ss
+      const parts = val.split(":").map(Number);
+      if (parts.length === 3) {
+        const [h, m, s] = parts;
+        if ([h, m, s].every(n => !isNaN(n))) return h * 60 + m + s / 60;
+      } else if (parts.length === 2) {
+        const [m, s] = parts;
+        if ([m, s].every(n => !isNaN(n))) return m + s / 60;
+      }
+    }
+    return null;
+  }
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,7 +81,8 @@ export default function CLOAnalysis() {
           weekDate: weekStart,
           week: weekLabel,
           error,
-          teamErrorTF
+          teamErrorTF,
+          cloTime: r["Total CLO Completion Time (Mins)"]
         });
 
         // Handle error types
@@ -114,6 +138,71 @@ export default function CLOAnalysis() {
 
   // Build filtered data
   const filtered = selected === "Everyone" ? rows.cleaned : rows.cleaned.filter(r => r.associate === selected);
+
+  // --- Weekly Average CLO Time Taken ---
+  let chartRows = filtered;
+  if (selectedYear !== 'all') chartRows = chartRows.filter(r => r.date && r.date.getFullYear() === Number(selectedYear));
+  if (selectedMonth !== 'all') chartRows = chartRows.filter(r => r.date && r.date.getMonth() === Number(selectedMonth));
+
+  // Weekly average
+  const weeklyCLOTimeMap = new Map();
+  chartRows.forEach(r => {
+    const min = parseCLOTime(r.cloTime);
+    if (min !== null && r.cloTime && r.cloTime !== "" && r.weekDate) {
+      const key = +r.weekDate;
+      if (!weeklyCLOTimeMap.has(key)) weeklyCLOTimeMap.set(key, { week: formatUS(r.weekDate), total: 0, count: 0 });
+      const obj = weeklyCLOTimeMap.get(key);
+      obj.total += min;
+      obj.count += 1;
+    }
+  });
+  const weeklyAvgCLOTimeData = Array.from(weeklyCLOTimeMap.entries())
+    .map(([key, obj]) => ({ week: obj.week, avgMinutes: +(obj.total / obj.count).toFixed(2) }))
+    .sort((a, b) => new Date(a.week) - new Date(b.week));
+
+  // Individual CLO updates (for line chart)
+  const cloUpdates = chartRows
+    .filter(r => r.cloTime && r.cloTime !== "" && parseCLOTime(r.cloTime) !== null && r.date)
+    .map((r, i) => ({
+      index: i,
+      date: r.date,
+      weekDate: r.weekDate,
+      week: r.week,
+      dateLabel: formatUS(r.date),
+      minutes: parseCLOTime(r.cloTime),
+      associate: r.associate
+    }))
+    .sort((a, b) => a.date - b.date);
+
+  // Find the first index for each week for x-axis ticks
+  const weekStartIndices = [];
+  let lastWeek = null;
+  cloUpdates.forEach((d, i) => {
+    if (!lastWeek || d.week !== lastWeek) {
+      weekStartIndices.push({ index: d.index, week: d.week });
+      lastWeek = d.week;
+    }
+  });
+  const weekTickFormatter = idx => {
+    const found = weekStartIndices.find(w => w.index === idx);
+    return found ? found.week : '';
+  };
+
+  // Tooltip for individual updates
+  const CLOUpdateTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload;
+      return (
+        <div style={{ background: "white", border: "1px solid #ccc", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.15)", marginBottom: "20px", minWidth: 180 }}>
+          <p style={{ margin: 0, fontWeight: 600 }}><strong>Date:</strong> {d.dateLabel}</p>
+          <div style={{ margin: 0, padding: 0 }}>
+            <span style={{ fontWeight: 500 }}>Time taken:</span> {d.minutes} min
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Weekly associate error rate
   const associateRateByWeek = new Map();
@@ -184,15 +273,7 @@ export default function CLOAnalysis() {
     return null;
   };
 
-  const CustomTooltip = ({active,payload,label})=>{
-    if(active && payload && payload.length){
-      return <div style={{background:"white",border:"1px solid #ccc",padding:"8px",borderRadius:"8px",boxShadow:"0 2px 6px rgba(0,0,0,0.15)",marginBottom:"20px"}}>
-        <p><strong>{label}</strong></p>
-        {payload.map((entry,i)=><p key={i} style={{color:entry.fill,margin:0}}>{entry.name}: {entry.value}</p>)}
-      </div>;
-    }
-    return null;
-  };
+  // Removed unused CustomTooltip to resolve eslint warning
 
   if(loading) return (
     <div className="flex flex-col items-center justify-center mt-20 space-y-4">
@@ -269,20 +350,79 @@ export default function CLOAnalysis() {
         </ResponsiveContainer>
       </div>}
 
-      {/* Weekly Error Types */}
-      {selected!=="Everyone" && <div className="bg-green-50 rounded-xl shadow p-6">
-        <h3 className="text-xl font-bold text-green-800 mb-4">Weekly Error Types</h3>
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={errorTypeData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="week" angle={-40} textAnchor="end" minTickGap={10} height={60}/>
-            <YAxis/>
-            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex:1000, top:-10 }}/>
-            <Legend/>
-            {errorTypeKeys.map(k=><Bar key={k} dataKey={k} stackId="a" fill={errorTypeColors[k]}/>)}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>}
+      {/* Weekly Average CLO Completion Time Chart */}
+      {weeklyAvgCLOTimeData.length > 0 && (
+        <div className="mt-8 mb-12 bg-yellow-50 rounded-xl shadow p-6">
+          <h3 className="text-xl font-bold text-yellow-800 mb-4">Weekly Average CLO Completion Time (minutes)</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={weeklyAvgCLOTimeData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="week" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <ReferenceLine y={15} stroke="#888" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: '15 min', position: 'right', fill: '#888', fontSize: 12 }} />
+              <Line type="monotone" dataKey="avgMinutes" name="Avg Minutes" stroke="#FF9800" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Individual CLO Updates Line Chart */}
+      {(() => {
+        if (cloUpdates.length === 0) return null;
+        return (
+          <div className="mt-8 mb-12 bg-orange-50 rounded-xl shadow p-6">
+            <h3 className="text-xl font-bold text-orange-800 mb-4">Individual CLO Updates: Completion Time (minutes)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={cloUpdates} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="index"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  ticks={weekStartIndices.map(w => w.index)}
+                  tickFormatter={weekTickFormatter}
+                  interval={0}
+                  height={60}
+                  angle={-45}
+                  textAnchor="end"
+                />
+                <YAxis dataKey="minutes" allowDecimals={false} />
+                <Tooltip 
+                  content={<CLOUpdateTooltip />} 
+                  isAnimationActive={false} 
+                  filterNull={false} 
+                  trigger="hover"
+                  labelFormatter={idx => cloUpdates[idx] ? cloUpdates[idx].dateLabel : ''}
+                />
+                <Legend />
+                <ReferenceLine y={15} stroke="#888" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: '15 min', position: 'right', fill: '#888', fontSize: 12 }} />
+                <Line
+                  type="monotone"
+                  dataKey="minutes"
+                  name="Completion Time (min)"
+                  stroke="#FF5722"
+                  strokeWidth={2}
+                  dot={({ cx, cy, ...rest }) => (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={3}
+                      stroke="#FF5722"
+                      strokeWidth={2}
+                      fill="#fff"
+                      style={{ pointerEvents: 'all' }}
+                    />
+                  )}
+                  activeDot={{ r: 5, stroke: '#FF5722', strokeWidth: 3, fill: '#FFCCBC' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="text-gray-600 text-sm mt-2">Each point represents a CLO update. {selected !== "Everyone" ? `Only updates for ${selected} are shown.` : "All associates shown."}</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

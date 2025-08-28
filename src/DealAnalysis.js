@@ -6,7 +6,8 @@ import {
   XAxis, YAxis,
   Tooltip, Legend,
   CartesianGrid, ResponsiveContainer,
-  LineChart, Line
+  LineChart, Line,
+  ReferenceLine
 } from "recharts";
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTr9lEADK4NPO_ATOkFS0CCYdk64OkbnAyKTd_74KCYza-7zAEJlV1T4zlvOEMWaF_FqcsCzAcnljsz/pub?gid=0&single=true&output=csv";
@@ -38,16 +39,17 @@ export default function DealAnalysis() {
     return null;
   }
 
-  // Group by week and compute average
-  // Use filtered data for associate-specific chart, or all data for 'Everyone'
-  const chartRows = selected === "Everyone"
-    ? (rows.cleaned || [])
-    : (rows.cleaned || []).filter(r => r.associate === selected);
 
+  // Filter rows by year, month, and associate for charting
+  let chartRows = rows.cleaned || [];
+  if (selected !== "Everyone") chartRows = chartRows.filter(r => r.associate === selected);
+  if (selectedYear !== 'all') chartRows = chartRows.filter(r => r.date && r.date.getFullYear() === Number(selectedYear));
+  if (selectedMonth !== 'all') chartRows = chartRows.filter(r => r.date && r.date.getMonth() === Number(selectedMonth));
+
+  // Weekly Average Time Taken Data
   const weeklyTimeTakenMap = new Map();
   chartRows.forEach(r => {
     const min = parseTimeTaken(r.timeTaken);
-    // Only include non-null, non-blank values
     if (min !== null && r.timeTaken && r.timeTaken.trim() !== "" && r.weekDate) {
       const key = +r.weekDate;
       if (!weeklyTimeTakenMap.has(key)) weeklyTimeTakenMap.set(key, { week: formatUS(r.weekDate), total: 0, count: 0 });
@@ -76,6 +78,7 @@ export default function DealAnalysis() {
       const cleaned = [];
       const errorTypeRows = [];
 
+
       (parsed.data || []).forEach(r => {
         const assoc = (r["Associate"] || "").trim();
         const date = parseDateUS(r["Date"]);
@@ -86,6 +89,8 @@ export default function DealAnalysis() {
         const error = errorTF === "true" || errorTF === "yes" || errorTF === "1";
         const teamErrorTF = (r["Team Error T/F"] || "").toString().trim().toLowerCase();
         const avgTime = parseFloat(r["Average"] || r["Average Time"] || r["Avg"] || r["Avg Time"] || 0);
+        // Always use column A for deal name
+        const dealName = r[Object.keys(r)[0]] || "";
         cleaned.push({
           associate: assoc,
           date,
@@ -94,7 +99,8 @@ export default function DealAnalysis() {
           error,
           teamErrorTF,
           averageTime: avgTime,
-          timeTaken: r["Time Taken"]
+          timeTaken: r["Time Taken"],
+          dealName: dealName.trim()
         });
 
         const rawTypes = (r["Error Type"] ?? "").trim();
@@ -332,17 +338,125 @@ export default function DealAnalysis() {
         <div className="mt-8 mb-12 bg-yellow-50 rounded-xl shadow p-6">
           <h3 className="text-xl font-bold text-yellow-800 mb-4">Weekly Average Time Taken (minutes)</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={weeklyAvgTimeTakenData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="avgMinutes" name="Avg Minutes" stroke="#FF9800" strokeWidth={2} />
-            </LineChart>
+              <LineChart data={weeklyAvgTimeTakenData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <ReferenceLine y={15} stroke="#888" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: '15 min', position: 'right', fill: '#888', fontSize: 12 }} />
+                <Line type="monotone" dataKey="avgMinutes" name="Avg Minutes" stroke="#FF9800" strokeWidth={2} />
+              </LineChart>
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Individual Deal Updates Line Chart */}
+      {(() => {
+        // Prepare data: each deal update as a point (date, timeTaken in minutes), filtered by year/month/associate
+        const dealUpdates = chartRows
+          .filter(r => r.timeTaken && r.timeTaken.trim() !== "" && parseTimeTaken(r.timeTaken) !== null && r.date)
+          .map((r, i) => ({
+            index: i,
+            date: r.date,
+            weekDate: r.weekDate,
+            week: r.week,
+            dateLabel: formatUS(r.date),
+            minutes: parseTimeTaken(r.timeTaken),
+            associate: r.associate,
+            dealName: r.dealName || ""
+          }))
+          .sort((a, b) => a.date - b.date);
+        if (dealUpdates.length === 0) return null;
+
+
+        // Custom tooltip for deal updates
+        const DealUpdateTooltip = ({ active, payload }) => {
+          if (active && payload && payload.length) {
+            const d = payload[0].payload;
+            return (
+              <div style={{ background: "white", border: "1px solid #ccc", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.15)", marginBottom: "20px", minWidth: 180 }}>
+                <p style={{ margin: 0, fontWeight: 600 }}><strong>Date:</strong> {d.dateLabel}</p>
+                <div style={{ margin: 0, padding: 0 }}>
+                  <span style={{ fontWeight: 500 }}>Deal name:</span> {d.dealName || "(none)"}
+                </div>
+                <div style={{ margin: 0, padding: 0 }}>
+                  <span style={{ fontWeight: 500 }}>Time taken:</span> {d.minutes} min
+                </div>
+              </div>
+            );
+          }
+          return null;
+        };
+
+        // Find the first index for each week
+        const weekStartIndices = [];
+        let lastWeek = null;
+        dealUpdates.forEach((d, i) => {
+          if (!lastWeek || d.week !== lastWeek) {
+            weekStartIndices.push({ index: d.index, week: d.week });
+            lastWeek = d.week;
+          }
+        });
+
+        // Custom tick formatter: show week label only at week start indices
+        const weekTickFormatter = idx => {
+          const found = weekStartIndices.find(w => w.index === idx);
+          return found ? found.week : '';
+        };
+
+        return (
+          <div className="mt-8 mb-12 bg-orange-50 rounded-xl shadow p-6">
+            <h3 className="text-xl font-bold text-orange-800 mb-4">Individual Deal Updates: Time Taken (minutes)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={dealUpdates} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="index"
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                  ticks={weekStartIndices.map(w => w.index)}
+                  tickFormatter={weekTickFormatter}
+                  interval={0}
+                  height={60}
+                  angle={-45}
+                  textAnchor="end"
+                />
+                <YAxis dataKey="minutes" allowDecimals={false} />
+                <Tooltip 
+                  content={<DealUpdateTooltip />} 
+                  isAnimationActive={false} 
+                  filterNull={false} 
+                  trigger="hover"
+                  labelFormatter={idx => dealUpdates[idx] ? dealUpdates[idx].dateLabel : ''}
+                />
+                <Legend />
+                <ReferenceLine y={15} stroke="#888" strokeDasharray="4 4" ifOverflow="extendDomain" label={{ value: '15 min', position: 'right', fill: '#888', fontSize: 12 }} />
+                <Line
+                  type="monotone"
+                  dataKey="minutes"
+                  name="Time Taken (min)"
+                  stroke="#FF5722"
+                  strokeWidth={2}
+                  dot={({ cx, cy, ...rest }) => (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={3}
+                      stroke="#FF5722"
+                      strokeWidth={2}
+                      fill="#fff"
+                      style={{ pointerEvents: 'all' }}
+                    />
+                  )}
+                  activeDot={{ r: 5, stroke: '#FF5722', strokeWidth: 3, fill: '#FFCCBC' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="text-gray-600 text-sm mt-2">Each point represents a deal update. {selected !== "Everyone" ? `Only updates for ${selected} are shown.` : "All associates shown."}</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }
