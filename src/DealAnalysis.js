@@ -375,14 +375,10 @@ export default function DealAnalysis() {
           if (active && payload && payload.length) {
             const d = payload[0].payload;
             return (
-              <div style={{ background: "white", border: "1px solid #ccc", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.15)", marginBottom: "20px", minWidth: 180 }}>
-                <p style={{ margin: 0, fontWeight: 600 }}><strong>Date:</strong> {d.dateLabel}</p>
-                <div style={{ margin: 0, padding: 0 }}>
-                  <span style={{ fontWeight: 500 }}>Deal name:</span> {d.dealName || "(none)"}
-                </div>
-                <div style={{ margin: 0, padding: 0 }}>
-                  <span style={{ fontWeight: 500 }}>Time taken:</span> {d.minutes} min
-                </div>
+              <div style={{ background: "white", border: "1px solid #ccc", padding: "8px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.15)", marginBottom: "20px", minWidth: 200 }}>
+                <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>Date:</span> {d.dateLabel}</p>
+                <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>Deal name:</span> {d.dealName || "(none)"}</p>
+                <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>Time taken:</span> {d.minutes} min</p>
               </div>
             );
           }
