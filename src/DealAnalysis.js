@@ -30,11 +30,16 @@ export default function DealAnalysis() {
   // --- Weekly Average Time Taken Calculation ---
   function parseTimeTaken(val) {
     if (!val || typeof val !== 'string') return null;
-    const parts = val.split(':');
-    if (parts.length === 2) {
-      const hours = parseInt(parts[0], 10);
-      const mins = parseInt(parts[1], 10);
-      if (!isNaN(hours) && !isNaN(mins)) return hours * 60 + mins;
+    // Try direct number first
+    const num = Number(val);
+    if (!isNaN(num)) return num;
+    const parts = val.split(":").map(Number);
+    if (parts.length === 3) {
+      const [h, m, s] = parts;
+      if ([h, m, s].every(n => !isNaN(n))) return h * 60 + m + s / 60;
+    } else if (parts.length === 2) {
+      const [m, s] = parts;
+      if ([m, s].every(n => !isNaN(n))) return m + s / 60;
     }
     return null;
   }
@@ -99,7 +104,7 @@ export default function DealAnalysis() {
           error,
           teamErrorTF,
           averageTime: avgTime,
-          timeTaken: r["Time Taken"],
+          timeTaken: r["Total Time Taken"],
           dealName: dealName.trim()
         });
 
