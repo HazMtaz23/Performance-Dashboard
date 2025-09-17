@@ -108,7 +108,7 @@ export default function DealAnalysis() {
           dealName: dealName.trim()
         });
 
-        const rawTypes = (r["Error Type"] ?? "").trim();
+  const rawTypes = (r["Associate Error Type"] ?? "").trim();
         const errorTypes = rawTypes ? rawTypes.split(",").map(t => t.trim()) : ["None"];
         errorTypes.forEach(type => {
           errorTypeRows.push({ associate: assoc, date, weekDate: weekStart, week: weekLabel, error, errorType: type || "None" });
